@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Body, HTTPException
 from jproperties import Properties
 
 key = Properties()
@@ -10,25 +10,29 @@ with open('use.key.properties', 'rb') as file:
 for k in key:
     rev[key.get(k).data] = k
 
-
 app = FastAPI()
 
 
 @app.get("/encrypt")
 async def encrypt(text: str = Body()):
-    res: str = key.get('0').data
+    res: str = key.get('sp').data
     arr = list()
     for s in text:
-        arr.append(key.get(str(ord(s))).data)
-    res = res.join(arr)
-    return res
+        enc = key.get(str(ord(s)))
+        if enc is None:
+            raise HTTPException(status_code=404, detail="Symbol '" + s + "' is not supported")
+        arr.append(enc.data)
+    return res.join(arr)
 
 
 @app.get("/decrypt")
 async def decrypt(text: str = Body()):
     res: str = ''
-    for s in text.split(key.get('0').data):
-        res += chr(int(rev.get(s)))
+    for s in text.split(key.get('sp').data):
+        letter = rev.get(s)
+        if letter is None:
+            raise HTTPException(status_code=404, detail="Invalid string")
+        res += chr(int(letter))
     return res
 
 
